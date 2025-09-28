@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Payment {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  checkoutRequestId String   @unique
+  merchantRequestId String
+  amount            Float
+  phoneNumber       String
+  accountReference  String
+  transactionDesc   String
+  paymentType       String   @default("C2B") // C2B, B2C, B2B
+  status            String   @default("PENDING") // PENDING, SUCCESS, FAILED, TIMEOUT
+  mpesaReceiptNumber String?
+  transactionDate   DateTime?
+  resultCode        Int?
+  resultDesc        String?
+  conversationId    String?
+  originatorConversationId String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("payments")
+}
+
+model B2CTransaction {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId    String   @unique
+  originatorConversationId String
+  amount            Float
+  phoneNumber       String
+  commandId         String   // SalaryPayment, BusinessPayment, PromotionPayment
+  remarks           String
+  occasion          String?
+  status            String   @default("PENDING")
+  transactionId     String?
+  resultCode        Int?
+  resultDesc        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("b2c_transactions")
+}
+
+model B2BTransaction {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId    String   @unique
+  originatorConversationId String
+  amount            Float
+  partyA            String
+  partyB            String
+  commandId         String   // BusinessPayBill, BusinessBuyGoods, DisburseFundsToBusiness, BusinessToBusinessTransfer
+  accountReference  String
+  remarks           String
+  status            String   @default("PENDING")
+  transactionId     String?
+  resultCode        Int?
+  resultDesc        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("b2b_transactions")
+}
+
+model AccountBalance {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId    String   @unique
+  originatorConversationId String
+  partyA            String
+  identifierType    String   // 1 for MSISDN, 2 for Till Number, 4 for Organization short code
+  remarks           String
+  status            String   @default("PENDING")
+  accountBalance    String?
+  resultCode        Int?
+  resultDesc        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("account_balances")
+}
+
+model TransactionStatus {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId    String   @unique
+  originatorConversationId String
+  transactionId     String
+  partyA            String
+  identifierType    String
+  remarks           String
+  occasion          String?
+  status            String   @default("PENDING")
+  receiptNumber     String?
+  resultCode        Int?
+  resultDesc        String?
+  transactionData   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("transaction_status")
+}
+
+model QRCode {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  merchantName      String
+  refNo             String   @unique
+  amount            Float?
+  trxCode           String   // BG for Buy Goods, WA for Withdraw Cash, PB for PayBill, SM for Send Money
+  cpi               String?  // Consumer Price Index
+  size              String   @default("300") // QR Code size
+  qrCodeData        String   // Base64 encoded QR code
+  status            String   @default("ACTIVE")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("qr_codes")
+}
+
+model TransactionReversal {
+  id                       String   @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId           String?
+  originatorConversationId String?
+  transactionId            String
+  amount                   Float
+  receiverParty            String
+  remarks                  String
+  occasion                 String?
+  status                   String   @default("PENDING")
+  retryCount               Int      @default(0)
+  maxRetries               Int      @default(3)
+  resultCode               Int?
+  resultDesc               String?
+  failureReason            String?
+  reversalTransactionId    String?
+  mpesaResponseCode        String?
+  mpesaResponseDesc        String?
+  callbackData             String?
+  callbackReceivedAt       DateTime?
+  lastRetryAt              DateTime?
+  expiredAt                DateTime?
+  lastStatusCheck          DateTime?
+  statusCheckCount         Int      @default(0)
+  errorCount               Int      @default(0)
+  lastError                String?
+  lastErrorAt              DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@map("transaction_reversals")
+}
