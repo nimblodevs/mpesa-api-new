@@ -1,4 +1,10 @@
 import express from "express";
+import { paymentLimiter, statusLimiter } from "../middleware/rateLimiter.js";
+import { 
+  validatePaymentInitiation, 
+  validateB2CPayment, 
+  validateCheckoutRequestId 
+} from "../middleware/validation.js";
 import {
   initiatePayment,
   checkPaymentStatus,
@@ -23,12 +29,12 @@ import {
 const router = express.Router();
 
 // C2B (Customer to Business) - STK Push
-router.post("/initiate", initiatePayment);
-router.get("/status/:checkoutRequestId", checkPaymentStatus);
+router.post("/initiate", paymentLimiter, validatePaymentInitiation, initiatePayment);
+router.get("/status/:checkoutRequestId", statusLimiter, validateCheckoutRequestId, checkPaymentStatus);
 router.get("/history", getPaymentsWithReversals);
 
 // B2C (Business to Customer)
-router.post("/b2c", b2cPayment);
+router.post("/b2c", paymentLimiter, validateB2CPayment, b2cPayment);
 router.get("/b2c/history", getB2CTransactions);
 
 // B2B (Business to Business)

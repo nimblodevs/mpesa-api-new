@@ -2,6 +2,9 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import bodyParser from "body-parser";
+import { apiLimiter } from "./middleware/rateLimiter.js";
+import { securityHeaders, requestLogger, errorHandler } from "./middleware/security.js";
+import logger from "./utils/logger.js";
 import paymentRoutes from "./routes/payments.js";
 import ReversalChecker from "./services/reversalChecker.js";
 
@@ -14,6 +17,9 @@ const PORT = process.env.PORT || 3001;
 const reversalChecker = new ReversalChecker();
 
 // Middleware
+app.use(securityHeaders);
+app.use(requestLogger);
+app.use(apiLimiter);
 app.use(
   cors({
     origin: [
@@ -30,12 +36,15 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Routes
 app.use("/api/payments", paymentRoutes);
 
+// Health check with more details
 // Health check
-app.get("/", (req, res) => {
+app.get("/health", (req, res) => {
   res.json({
     status: "OK",
+    service: "M-Pesa Payment Gateway",
     timestamp: new Date().toISOString(),
     environment: process.env.MPESA_ENVIRONMENT,
+    version: process.env.npm_package_version || "1.0.0",
   });
 });
 
@@ -55,21 +64,15 @@ app.get("/api/reversal-stats", async (req, res) => {
   }
 });
 
-// Error handling middleware
-app.use((error, req, res, next) => {
-  console.error("Server error:", error);
-  res.status(500).json({
-    success: false,
-    message: "Internal server error",
-  });
-});
+// Error handling
+app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`🚀 M-Pesa Payment Server running on port ${PORT}`);
-  console.log(`📱 Environment: ${process.env.MPESA_ENVIRONMENT || "sandbox"}`);
-  console.log(
-    `🌐 CORS enabled for: ${process.env.FRONTEND_URL || "localhost"}`
-  );
+  logger.info(`M-Pesa Payment Server started`, {
+    port: PORT,
+    environment: process.env.MPESA_ENVIRONMENT || "sandbox",
+    corsOrigin: process.env.FRONTEND_URL || "localhost",
+  });
   
   // Start reversal checker
   reversalChecker.start();
@@ -77,13 +80,13 @@ app.listen(PORT, () => {
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
+  logger.info('SIGTERM received, shutting down gracefully');
   reversalChecker.stop();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
+  logger.info('SIGINT received, shutting down gracefully');
   reversalChecker.stop();
   process.exit(0);
 });

@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import ErrorBoundary from "./components/ErrorBoundary";
+import ToastContainer from "./components/ToastContainer";
+import { useToast } from "./hooks/useToast";
 import PaymentForm from "./components/PaymentForm";
 import PaymentStatus from "./components/PaymentStatus";
 import PaymentHistory from "./components/PaymentHistory";
@@ -20,6 +23,7 @@ import {
 } from "lucide-react";
 
 function App() {
+  const { toasts } = useToast();
   const [activeTab, setActiveTab] = useState<
     "c2b" | "b2c" | "b2b" | "balance" | "qr" | "history" | "reversal"
   >("c2b");
@@ -54,7 +58,9 @@ function App() {
   };
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <ToastContainer toasts={toasts} />
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-gray-200/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -280,6 +286,7 @@ function App() {
         </div>
       </footer>
     </div>
+    </ErrorBoundary>
   );
 }
 
